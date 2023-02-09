@@ -72,7 +72,7 @@ class Glit {
  */
 function getGlitsFromDB (req, response) {
   client.query("SELECT * FROM glits ORDER BY datetime DESC", (err, result) => {
-    console.log(result.rows);
+    // console.log(result.rows);
     response.send(result.rows);
     // response.send(result.rows.reverse());
   })
@@ -115,14 +115,6 @@ app.get('/glits',getGlitsFromDB)
       }
     )
   }
-// app.post('/glits', (req, res) => {
-//   // console.log(req.body);    
-//     const glits = readGlitsFromFile();
-//     const glit = new Glit(req.body);          // from payload
-//     glits.push(glit);
-//     fs.writeFileSync(glitsFile,JSON.stringify(glits));
-//     res.status(201).send();                         // set statuscode 201 and send
-// })                                 
 
 // Hello World
 app.get('/', (req, res) => {
