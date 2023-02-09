@@ -70,13 +70,6 @@ function getGlitsFromDB (req, response) {
   // return(result.rows);
 }
 
-// Glits Get
-app.get('/glits',getGlitsFromDB)
-
-
-// Glits Post
-app.post('/glits',postGlitsToDB) 
-
 function postGlitsToDB(request, response) {
   const glit = new Glit(request.body);
   console.log(glit);
@@ -91,7 +84,33 @@ function postGlitsToDB(request, response) {
     response.send(glit);
     }
   )
-}                            
+}
+
+function getUser(request, response) {
+  // username = 'Jascha';
+  username = request;
+  console.log(username);
+
+  const queryString = "SELECT * FROM users WHERE user_name = 'jascha'";
+  client.query(queryString), (err, result) => {
+    console.log(result.rows);
+  } 
+}
+
+// Session
+// app.get("/user", getUser)
+app.get("/user", getUser('jascha'))
+// app.get("/user", (req, res) => {
+//   client.query("SELECT * FROM users WHERE user_name = 'jascha'", (err, result) => {
+//     console.log(result.rows);
+//   })
+// })
+
+// app.post("/sessions", postSession)
+
+// Glits Get
+app.get('/glits',getGlitsFromDB)
+app.post('/glits',postGlitsToDB) 
 
 // Hello World
 app.get('/', (req, res) => {
