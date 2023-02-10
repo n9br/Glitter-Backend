@@ -87,19 +87,21 @@ function postGlitsToDB(request, response) {
 }
 
 function getUser(request, response) {
-  // username = 'Jascha';
-  username = request;
-  console.log(username);
+  const username = "jascha";
+  // username = request;
+  console.log("Line 92 - " + username);
 
-  const queryString = "SELECT * FROM users WHERE user_name = 'jascha'";
-  client.query(queryString), (err, result) => {
+  // const queryString = "SELECT * FROM users WHERE user_name = 'jascha'";
+  const queryString = "SELECT * FROM users WHERE user_name = $1;";
+  // client.query(queryString), (err, result) => {
+  client.query(queryString, [username], (err, result) => {
     console.log(result.rows);
-  } 
+  } )
 }
 
 // Session
-// app.get("/user", getUser)
-app.get("/user", getUser('jascha'))
+app.get("/user", getUser)
+// app.get("/user", getUser('jascha'))
 // app.get("/user", (req, res) => {
 //   client.query("SELECT * FROM users WHERE user_name = 'jascha'", (err, result) => {
 //     console.log(result.rows);
