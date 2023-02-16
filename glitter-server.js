@@ -149,7 +149,7 @@ function getUser(request, response) {
 function postSession(request, response) {
   // const username = "jascha";
   // const { username, password } = request.body;
-  // var { username, password } = request.body;
+  var { username, password } = request.body;
   if (! username || ! password) {
     console.log("Username or PW from form missing")
     response.status(401).send("Please send username and password!");
