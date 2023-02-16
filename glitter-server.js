@@ -31,10 +31,9 @@ app.use(cors({
 app.use(express.json());
 
 /**#
- * Class.
+ * Classes.
  * 
  */
-
 
 /**
  *avatarId: number;
@@ -60,22 +59,55 @@ class Glit {
 }
 
 /**
+ * id
+ * userId
+ * token
+ */
+class Session {
+  id;
+  userId;
+  token;
+  
+  constructor(data) {
+    this.id = data.id;
+    this.userId = data.userId;
+    this.token = data.token;
+  }
+}
+
+/**
+ * id
+ * firstName
+ * lastName
+ * username
+ * password
+ */
+class User {
+  id;
+  firstName;
+  lastName;
+  username;
+  password;
+
+  constructor(data) {
+    this.id = data.id;
+    this.firstName = data.firstName;
+    this.lastName = data.lastName;
+    this.username = data.username;
+    this.password = data.password;
+  }
+}
+
+/**
  * @params : Standard
  */
 function getGlitsFromDB (req, response) {
-  client.query("SELECT * FROM glits ORDER BY datetime DESC", (err, result) => {
+  client.query("SELECT * FROM glits ORDER BY datetime DESC",  (err, result) => {
     // console.log(result.rows);
     response.send(result.rows);
   })
   // return(result.rows);
 }
-
-// Glits Get
-app.get('/glits',getGlitsFromDB)
-
-
-// Glits Post
-app.post('/glits',postGlitsToDB) 
 
 function postGlitsToDB(request, response) {
   const glit = new Glit(request.body);
@@ -91,7 +123,114 @@ function postGlitsToDB(request, response) {
     response.send(glit);
     }
   )
-}                            
+}
+
+// Testing
+function getUser(request, response) {
+  const username = "jascha";
+  // const { username, password } = request.body;
+  console.log("Line 92 - " + username);
+
+  // const queryString = "SELECT * FROM users WHERE user_name = 'jascha'";
+  const queryString = "SELECT * FROM users WHERE user_name = $1;";
+  // client.query(queryString), (err, result) => {
+  client.query(queryString, [username], (err, result) => {
+    console.log(result.rows);
+  } )
+}
+
+/**
+ * 
+ * @param {*} request 
+ * @param {*} response 
+ */
+// Sessions / product
+
+function postSession(request, response) {
+  // const username = "jascha";
+  // const { username, password } = request.body;
+  // var { username, password } = request.body;
+  if (! username || ! password) {
+    console.log("Username or PW from form missing")
+    response.status(401).send("Please send username and password!");
+  }
+  else { 
+
+  const queryString = "SELECT * FROM users WHERE user_name = $1;";
+  client.query(queryString, [username], (err, result) => {
+    if (err) {
+      console.log("Error quering database");
+      response.status(500).send("Error quering database");
+    }
+    else {        // success query
+      if ( ( result.rowCount != "1" ) ) {          // not exactly one record found
+        console.log("----no result ------------------");
+        console.log("User " + username + " not in DB or ambiguous");
+        response.status(401).send("Please send username and password!");
+      }
+      //                                          // one record + Passwords not match
+      else if ( ! (password.trim() === result.rows[0].password.trim())) {    
+          console.log('\n + Password wrong. Supplied: ' + password + " vs. DB " + result.rows[0].password);
+          response.status(401).send("Please send username and password!");
+          }
+      else {   
+              // Password match
+
+              currUser = new User({
+                id: result.rows[0].id,
+                firstName: result.rows[0].first_name,
+                lastName: result.rows[0].last_name,
+                username: result.rows[0].user_name,
+                password: result.rows[0].password
+              });
+
+              userSession = new Session({
+                userId: currUser.id,
+                token: Math.random().toString(36)
+              });
+
+              const queryString = "INSERT INTO sessions (user_id, token) VALUES ($1, $2);";
+              client.query(queryString,[userSession.userId, userSession.token], (err, result) => {
+                if (err) {
+                  response.status(400);
+                }
+                response.status(201);
+                response.send(userSession);
+              });
+
+              
+              // console.log("----------------------");
+              // console.log('\nPassword correct !');
+              // console.log('Username :' + currUser.username);
+              // console.log('Password :' + currUser.password);
+              // console.log('Userid :' + currUser.id);
+              // console.log("----------------------");
+              // response.status(200).send(result.rows);   // doCheck // don't send password / full record
+
+              
+
+          // doCheck // if Password correct create session ==> callback function !?!?
+      }  
+    } 
+  } )   // end client.query
+  }
+  // console.log("postsession hit");
+}
+
+// User
+app.get("/user", postSession)
+// app.get("/user", getUser)
+// app.get("/user", getUser('jascha'))
+// app.get("/user", (req, res) => {
+//   client.query("SELECT * FROM users WHERE user_name = 'jascha'", (err, result) => {
+//     console.log(result.rows);
+//   })
+// })
+app.post("/sessions", postSession)
+
+// Glits Get
+app.get('/glits',getGlitsFromDB)
+app.post('/glits',postGlitsToDB) 
 
 // Hello World
 app.get('/', (req, res) => {
