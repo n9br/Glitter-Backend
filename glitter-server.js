@@ -100,50 +100,9 @@ class User {
 }
 
 /**
- * id
- * userId
- * token
- */
-class Session {
-  id;
-  userId;
-  token;
-  
-  constructor(data) {
-    this.id = data.id;
-    this.userId = data.userId;
-    this.token = data.token;
-  }
-}
-
-/**
- * id
- * firstName
- * lastName
- * username
- * password
- */
-class User {
-  id;
-  firstName;
-  lastName;
-  username;
-  password;
-
-  constructor(data) {
-    this.id = data.id;
-    this.firstName = data.firstName;
-    this.lastName = data.lastName;
-    this.username = data.username;
-    this.password = data.password;
-  }
-}
-
-/**
  * @params : Standard
  */
 function getGlitsFromDB (req, response) {
-  client.query("SELECT * FROM glits ORDER BY datetime DESC",  (err, result) => {
   client.query("SELECT * FROM glits ORDER BY datetime DESC",  (err, result) => {
     // console.log(result.rows);
     response.send(result.rows);
@@ -210,21 +169,37 @@ function postSession(request, response) {
         console.log("User " + username + " not in DB or ambiguous");
         response.status(401).send("Please send username and password!");
       }
-      //                                          // one record + Passwords not match
-      else if ( ! (password.trim() === result.rows[0].password.trim())) {    
+      //                                          
+      else {      // row count = 1 ; delete existing sessions of user
+
+        currUser = new User({     // fill user
+          id: result.rows[0].id,
+          firstName: result.rows[0].first_name,
+          lastName: result.rows[0].last_name,
+          username: result.rows[0].user_name,
+          password: result.rows[0].password
+        });
+
+        const queryString = "DELETE FROM sessions WHERE user_id = $1;";
+        client.query(queryString,[currUser.id], (err,result) => {
+          if (err) {
+            response.status(400);
+            console.log("Error deleting existing Usersessions");
+          }
+          // if (result) {
+          else {
+            response.status(202);
+            console.log("DB delete exsting Usersessions successful");
+          }
+          // response.send(result);
+        });      
+
+      if ( ! (password.trim() === result.rows[0].password.trim())) {          // one record + Passwords not match
           console.log('\n + Password wrong. Supplied: ' + password + " vs. DB " + result.rows[0].password);
           response.status(401).send("Please send username and password!");
           }
       else {   
-              // Password match
-
-              currUser = new User({
-                id: result.rows[0].id,
-                firstName: result.rows[0].first_name,
-                lastName: result.rows[0].last_name,
-                username: result.rows[0].user_name,
-                password: result.rows[0].password
-              });
+              // Password match : create Session
 
               userSession = new Session({
                 userId: currUser.id,
@@ -252,7 +227,8 @@ function postSession(request, response) {
               
 
           // doCheck // if Password correct create session ==> callback function !?!?
-      }  
+        } 
+      }
     } 
   } )   // end client.query
   }
