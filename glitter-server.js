@@ -32,6 +32,7 @@ app.use(express.json());
 
 /**#
  * Classes.
+ * Classes.
  * 
  */
 
@@ -99,9 +100,50 @@ class User {
 }
 
 /**
+ * id
+ * userId
+ * token
+ */
+class Session {
+  id;
+  userId;
+  token;
+  
+  constructor(data) {
+    this.id = data.id;
+    this.userId = data.userId;
+    this.token = data.token;
+  }
+}
+
+/**
+ * id
+ * firstName
+ * lastName
+ * username
+ * password
+ */
+class User {
+  id;
+  firstName;
+  lastName;
+  username;
+  password;
+
+  constructor(data) {
+    this.id = data.id;
+    this.firstName = data.firstName;
+    this.lastName = data.lastName;
+    this.username = data.username;
+    this.password = data.password;
+  }
+}
+
+/**
  * @params : Standard
  */
 function getGlitsFromDB (req, response) {
+  client.query("SELECT * FROM glits ORDER BY datetime DESC",  (err, result) => {
   client.query("SELECT * FROM glits ORDER BY datetime DESC",  (err, result) => {
     // console.log(result.rows);
     response.send(result.rows);
