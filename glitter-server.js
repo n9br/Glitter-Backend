@@ -214,7 +214,6 @@ function postSession(request, response) {
                 response.status(201);
                 response.send(userSession);
               });
-              console.log("ID: " + userSession.userId + " - Token: " + userSession.token);
 
               
               // console.log("----------------------");
