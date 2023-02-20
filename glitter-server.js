@@ -9,6 +9,7 @@ const { Client } = require('pg');
 
 const express = require("express");     
 const { request } = require("http");
+// const { getUserByUsername } = require("../Code/Projects/Glitter/backend/src/models/user");
 
 const app = express();
 const port = 4000;
@@ -16,10 +17,11 @@ const port = 4000;
 const client = new Client({
   user: "postgres", 
   database: "glitter", 
-  password: "ee49f2c1d69f42faa6f5c91dc1daa8d9"
+  password: "postgres"
+  // password: "ee49f2c1d69f42faa6f5c91dc1daa8d9"
 });
 
-client.connect();   // hier richtig
+client.connect();   // hier richtig 
 
 /**
  * Middleware.
@@ -30,8 +32,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-/**#
- * Classes.
+/**
  * Classes.
  * 
  */
@@ -92,11 +93,29 @@ class User {
 
   constructor(data) {
     this.id = data.id;
-    this.firstName = data.firstName;
-    this.lastName = data.lastName;
-    this.username = data.username;
+    this.firstName = data.first_name;
+    this.lastName = data.last_name;
+    this.username = data.user_name;
     this.password = data.password;
   }
+}
+
+/*****************************************
+ * MODEL
+ ****************************************/
+
+// Testing
+function getUser(request, response) {
+  const username = "jascha";
+  // const { username, password } = request.body;
+  console.log("Line 92 - " + username);
+
+  // const queryString = "SELECT * FROM users WHERE user_name = 'jascha'";
+  const queryString = "SELECT * FROM users WHERE user_name = $1;";
+  // client.query(queryString), (err, result) => {
+  client.query(queryString, [username], (err, result) => {
+    console.log(result.rows);
+  } )
 }
 
 /**
@@ -126,19 +145,55 @@ function postGlitsToDB(request, response) {
   )
 }
 
-// Testing
-function getUser(request, response) {
-  const username = "jascha";
-  // const { username, password } = request.body;
-  console.log("Line 92 - " + username);
-
-  // const queryString = "SELECT * FROM users WHERE user_name = 'jascha'";
-  const queryString = "SELECT * FROM users WHERE user_name = $1;";
-  // client.query(queryString), (err, result) => {
-  client.query(queryString, [username], (err, result) => {
-    console.log(result.rows);
-  } )
+async function getUserByUsername(username) {
+  const res = await client.query("SELECT * FROM users WHERE user_name = $1;",[username]);
+  if (res.rowCount === 1) {
+    // console.log("in getUserByUsername: " + JSON.stringify(res.rows[0]))
+    return new User(res.rows[0])
+  }
+  return undefined
 }
+
+async function createSessionforUser(userId) {   // or id ?
+
+  await client.query("DELETE FROM sessions WHERE user_id = $1;",(userId))   // no check for success
+
+  const token = Math.random().toString(36);
+  console.log(await client.query("INSERT INTO sessions (user_id, token) VALUES ($1, $2);",[userId, token]));
+
+  // return new Session(id, userId, token )
+
+  // userSession = new Session({
+  //   // userId: currUser.id,
+  //   userId: user.id,
+  //   token: Math.random().toString(36)
+  };
+
+  // const queryString = "INSERT INTO sessions (user_id, token) VALUES ($1, $2);";
+//   client.query(queryString,[userSession.userId, userSession.token], (err, result) => {
+//     if (err) {
+//       response.status(400);
+//     }
+//     response.status(201);
+//     response.send(userSession);
+//   });
+
+//   console.log("ID: " + userSession.userId + " - Token: " + userSession.token);
+
+// }
+
+
+/*****************************************
+ * VIEW
+ ****************************************/
+
+
+
+
+
+/*****************************************
+ * CONTROLLER
+ ****************************************/
 
 /**
  * 
@@ -147,94 +202,83 @@ function getUser(request, response) {
  */
 // Sessions / product
 
-function postSession(request, response) {
+async function postSession(request, response) {
   // const username = "jascha";
   // const { username, password } = request.body;
   var { username, password } = request.body;
   if (! username || ! password) {
     console.log("Username or PW from form missing")
+    response.status(400).send("Please enter username and password!");
+  }
+
+  const user = await getUserByUsername(username);
+
+  if ( ! user )  {
+      response.status(401).send("Mismatch user or password");
+  }
+  else if ( ! (password.trim() === user.password.trim())) {          // one record + Passwords not match
+    console.log('\n + Password wrong. Supplied: ' + password + " vs. DB " + user.password);
     response.status(401).send("Please send username and password!");
   }
-  else { 
 
-  const queryString = "SELECT * FROM users WHERE user_name = $1;";
-  client.query(queryString, [username], (err, result) => {
-    if (err) {
-      console.log("Error quering database");
-      response.status(500).send("Error quering database");
-    }
-    else {        // success query
-      if ( ( result.rowCount != "1" ) ) {          // not exactly one record found
-        console.log("----no result ------------------");
-        console.log("User " + username + " not in DB or ambiguous");
-        response.status(401).send("Please send username and password!");
-      }
-      //                                          
-      else {      // row count = 1 ; delete existing sessions of user
+  await createSessionforUser(user.id);     // oder UserId ?!
 
-        currUser = new User({     // fill user
-          id: result.rows[0].id,
-          firstName: result.rows[0].first_name,
-          lastName: result.rows[0].last_name,
-          username: result.rows[0].user_name,
-          password: result.rows[0].password
-        });
+      // const queryString = "DELETE FROM sessions WHERE user_id = $1;";
+      // // client.query(queryString,[currUser.id], (err,result) => {
+      // client.query(queryString,[user.id], (err,result) => {
+      //   if (err) {
+      //     response.status(400);
+      //     console.log("Error deleting existing Usersessions");
+      //   }
+      //   // if (result) {
+      //   else {
+      //     response.status(202);
+      //     console.log("DB delete exsting Usersessions successful");
+      //   }
+      //   // response.send(result);
+      // });      
 
-        const queryString = "DELETE FROM sessions WHERE user_id = $1;";
-        client.query(queryString,[currUser.id], (err,result) => {
-          if (err) {
-            response.status(400);
-            console.log("Error deleting existing Usersessions");
-          }
-          // if (result) {
-          else {
-            response.status(202);
-            console.log("DB delete exsting Usersessions successful");
-          }
-          // response.send(result);
-        });      
+    // if ( ! (password.trim() === user.password.trim())) {          // one record + Passwords not match
+    //     console.log('\n + Password wrong. Supplied: ' + password + " vs. DB " + result.rows[0].password);
+    //     response.status(401).send("Please send username and password!");
+    //     }
+    // else {   
+            // Password match : create Session
 
-      if ( ! (password.trim() === result.rows[0].password.trim())) {          // one record + Passwords not match
-          console.log('\n + Password wrong. Supplied: ' + password + " vs. DB " + result.rows[0].password);
-          response.status(401).send("Please send username and password!");
-          }
-      else {   
-              // Password match : create Session
+            // userSession = new Session({
+            //   // userId: currUser.id,
+            //   userId: user.id,
+            //   token: Math.random().toString(36)
+            // });
 
-              userSession = new Session({
-                userId: currUser.id,
-                token: Math.random().toString(36)
-              });
+            // const queryString = "INSERT INTO sessions (user_id, token) VALUES ($1, $2);";
+            // client.query(queryString,[userSession.userId, userSession.token], (err, result) => {
+            //   if (err) {
+            //     response.status(400);
+            //   }
+            //   response.status(201);
+            //   response.send(userSession);
+            // });
+            
+            // console.log("ID: " + userSession.userId + " - Token: " + userSession.token);
+            
+            // console.log("----------------------");
+            // console.log('\nPassword correct !');
+            // console.log('Username :' + currUser.username);
+            // console.log('Password :' + currUser.password);
+            // console.log('Userid :' + currUser.id);
+            // console.log("----------------------");
+            // response.status(200).send(result.rows);   // doCheck // don't send password / full record
 
-              const queryString = "INSERT INTO sessions (user_id, token) VALUES ($1, $2);";
-              client.query(queryString,[userSession.userId, userSession.token], (err, result) => {
-                if (err) {
-                  response.status(400);
-                }
-                response.status(201);
-                response.send(userSession);
-              });
-              
-              console.log("ID: " + userSession.userId + " - Token: " + userSession.token);
-              
-              // console.log("----------------------");
-              // console.log('\nPassword correct !');
-              // console.log('Username :' + currUser.username);
-              // console.log('Password :' + currUser.password);
-              // console.log('Userid :' + currUser.id);
-              // console.log("----------------------");
-              // response.status(200).send(result.rows);   // doCheck // don't send password / full record
+            
 
-              
-
-          // doCheck // if Password correct create session ==> callback function !?!?
-        } 
-      }
-    } 
-  } )   // end client.query
-  }
-  // console.log("postsession hit");
-}
+        // doCheck // if Password correct create session ==> callback function !?!?
+  } 
+    // }
+//   } )   // end client.query
+//   }
+//   // console.log("postsession hit");
+// }
 
 // User
 app.get("/user", postSession)
@@ -255,6 +299,11 @@ app.post('/glits',postGlitsToDB)
 app.get('/', (req, res) => {
   res.send('Hello World from expressJS!')
 })
+
+
+/*****************************************
+ * MAIN
+ ****************************************/
 
 app.listen(port, () => {          // actually run server (listen on port)
   console.log(`Glitter Server listening on port ${port}`)
