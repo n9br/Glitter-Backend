@@ -104,19 +104,19 @@ class User {
  * MODEL
  ****************************************/
 
-// Testing
-function getUser(request, response) {
-  const username = "jascha";
-  // const { username, password } = request.body;
-  console.log("Line 92 - " + username);
+// // Testing
+// function getUser(request, response) {
+//   const username = "jascha";
+//   // const { username, password } = request.body;
+//   console.log("Line 92 - " + username);
 
-  // const queryString = "SELECT * FROM users WHERE user_name = 'jascha'";
-  const queryString = "SELECT * FROM users WHERE user_name = $1;";
-  // client.query(queryString), (err, result) => {
-  client.query(queryString, [username], (err, result) => {
-    console.log(result.rows);
-  } )
-}
+//   // const queryString = "SELECT * FROM users WHERE user_name = 'jascha'";
+//   const queryString = "SELECT * FROM users WHERE user_name = $1;";
+//   // client.query(queryString), (err, result) => {
+//   client.query(queryString, [username], (err, result) => {
+//     console.log(result.rows);
+//   } )
+// }
 
 /**
  * @params : Standard
@@ -156,12 +156,18 @@ async function getUserByUsername(username) {
 
 async function createSessionforUser(userId) {   // or id ?
 
-  await client.query("DELETE FROM sessions WHERE user_id = $1;",(userId))   // no check for success
+  console.log(typeof(userId));
+  await client.query("DELETE FROM sessions WHERE user_id = $1;",[userId])   // no check for success ; need a list !!
 
   const token = Math.random().toString(36);
-  console.log(await client.query("INSERT INTO sessions (user_id, token) VALUES ($1, $2);",[userId, token]));
-
-  // return new Session(id, userId, token )
+  const res = await client.query(
+    "INSERT INTO sessions (user_id, token) VALUES ($1, $2);",
+    [userId, token]
+    );                                          // funzt 02-21
+  //  console.log(res.rows[0]);
+   console.log(JSON.stringify(res));  
+    // return new Session(res.rows[0])
+  return new Session({userId, token})
 
   // userSession = new Session({
   //   // userId: currUser.id,
@@ -186,9 +192,6 @@ async function createSessionforUser(userId) {   // or id ?
 /*****************************************
  * VIEW
  ****************************************/
-
-
-
 
 
 /*****************************************
@@ -221,7 +224,10 @@ async function postSession(request, response) {
     response.status(401).send("Please send username and password!");
   }
 
-  await createSessionforUser(user.id);     // oder UserId ?!
+  console.log("User.id before function: " + user.id)
+  const session = await createSessionforUser(user.id);     // oder UserId ?!
+  console.log("Userid: " + session.userId + ", Token: " + session.token)
+  response.status(201).send({ token: session.token });
 
       // const queryString = "DELETE FROM sessions WHERE user_id = $1;";
       // // client.query(queryString,[currUser.id], (err,result) => {
