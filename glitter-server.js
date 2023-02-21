@@ -72,7 +72,7 @@ class Session {
   
   constructor(data) {
     this.id = data.id;
-    this.userId = data.userId;
+    this.userId = data.user_id;
     this.token = data.token;
   }
 }
@@ -104,29 +104,13 @@ class User {
  * MODEL
  ****************************************/
 
-// // Testing
-// function getUser(request, response) {
-//   const username = "jascha";
-//   // const { username, password } = request.body;
-//   console.log("Line 92 - " + username);
-
-//   // const queryString = "SELECT * FROM users WHERE user_name = 'jascha'";
-//   const queryString = "SELECT * FROM users WHERE user_name = $1;";
-//   // client.query(queryString), (err, result) => {
-//   client.query(queryString, [username], (err, result) => {
-//     console.log(result.rows);
-//   } )
-// }
-
 /**
  * @params : Standard
  */
 function getGlitsFromDB (req, response) {
   client.query("SELECT * FROM glits ORDER BY datetime DESC",  (err, result) => {
-    // console.log(result.rows);
     response.send(result.rows);
   })
-  // return(result.rows);
 }
 
 function postGlitsToDB(request, response) {
@@ -134,7 +118,6 @@ function postGlitsToDB(request, response) {
   console.log(glit);
 
   const queryString = "INSERT INTO glits (avatarId, \"user\", text, datetime) VALUES ($1, $2, $3, $4)"
-  // console.log(client.query(queryString, [glit.avatarId, glit.user, glit.text, glit.datetime]));
   client.query(queryString, [glit.avatarId, glit.user, glit.text, glit.datetime], (err, result) => {
     if (err) {
       response.status(400);
@@ -161,39 +144,17 @@ async function createSessionforUser(userId) {   // or id ?
 
   const token = Math.random().toString(36);
   const res = await client.query(
-    "INSERT INTO sessions (user_id, token) VALUES ($1, $2);",
+    "INSERT INTO sessions (user_id, token) VALUES ($1, $2) RETURNING *;",
     [userId, token]
     );                                          // funzt 02-21
-  //  console.log(res.rows[0]);
-   console.log(JSON.stringify(res));  
-    // return new Session(res.rows[0])
-  return new Session({userId, token})
-
-  // userSession = new Session({
-  //   // userId: currUser.id,
-  //   userId: user.id,
-  //   token: Math.random().toString(36)
-  };
-
-  // const queryString = "INSERT INTO sessions (user_id, token) VALUES ($1, $2);";
-//   client.query(queryString,[userSession.userId, userSession.token], (err, result) => {
-//     if (err) {
-//       response.status(400);
-//     }
-//     response.status(201);
-//     response.send(userSession);
-//   });
-
-//   console.log("ID: " + userSession.userId + " - Token: " + userSession.token);
-
-// }
-
+   console.log(res.rows[0]);
+    return new Session(res.rows[0])
+}
+  // return new Session({userId, token})
 
 /*****************************************
  * VIEW
  ****************************************/
-
-
 /*****************************************
  * CONTROLLER
  ****************************************/
@@ -224,77 +185,16 @@ async function postSession(request, response) {
     response.status(401).send("Please send username and password!");
   }
 
-  console.log("User.id before function: " + user.id)
+  console.log("User.id before function: " + user.id);
   const session = await createSessionforUser(user.id);     // oder UserId ?!
   console.log("Userid: " + session.userId + ", Token: " + session.token)
   response.status(201).send({ token: session.token });
 
-      // const queryString = "DELETE FROM sessions WHERE user_id = $1;";
-      // // client.query(queryString,[currUser.id], (err,result) => {
-      // client.query(queryString,[user.id], (err,result) => {
-      //   if (err) {
-      //     response.status(400);
-      //     console.log("Error deleting existing Usersessions");
-      //   }
-      //   // if (result) {
-      //   else {
-      //     response.status(202);
-      //     console.log("DB delete exsting Usersessions successful");
-      //   }
-      //   // response.send(result);
-      // });      
-
-    // if ( ! (password.trim() === user.password.trim())) {          // one record + Passwords not match
-    //     console.log('\n + Password wrong. Supplied: ' + password + " vs. DB " + result.rows[0].password);
-    //     response.status(401).send("Please send username and password!");
-    //     }
-    // else {   
-            // Password match : create Session
-
-            // userSession = new Session({
-            //   // userId: currUser.id,
-            //   userId: user.id,
-            //   token: Math.random().toString(36)
-            // });
-
-            // const queryString = "INSERT INTO sessions (user_id, token) VALUES ($1, $2);";
-            // client.query(queryString,[userSession.userId, userSession.token], (err, result) => {
-            //   if (err) {
-            //     response.status(400);
-            //   }
-            //   response.status(201);
-            //   response.send(userSession);
-            // });
-            
-            // console.log("ID: " + userSession.userId + " - Token: " + userSession.token);
-            
-            // console.log("----------------------");
-            // console.log('\nPassword correct !');
-            // console.log('Username :' + currUser.username);
-            // console.log('Password :' + currUser.password);
-            // console.log('Userid :' + currUser.id);
-            // console.log("----------------------");
-            // response.status(200).send(result.rows);   // doCheck // don't send password / full record
-
-            
-
-        // doCheck // if Password correct create session ==> callback function !?!?
-  } 
-    // }
-//   } )   // end client.query
-//   }
-//   // console.log("postsession hit");
-// }
+}
 
 // User
 app.get("/user", postSession)
-// app.get("/user", getUser)
-// app.get("/user", getUser('jascha'))
-// app.get("/user", (req, res) => {
-//   client.query("SELECT * FROM users WHERE user_name = 'jascha'", (err, result) => {
-//     console.log(result.rows);
-//   })
-// })
+
 app.post("/sessions", postSession)
 
 // Glits Get
